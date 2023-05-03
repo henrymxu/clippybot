@@ -56,9 +56,9 @@ export class CommandDispatcherImpl implements CommandDispatcher {
         replier: CommandReplier
     ) {
         const member = await context.guild.members.fetch(user.id);
-        context.logger.d(TAG, `Executing Command ${command.config.name} by ${member.id}`);
-        await command.preExecute(context, member, replier);
+        context.logger.d(TAG, `Command'${command.config.name}' was executed by ${member.id}`);
         try {
+            await command.preExecute(context, member, replier);
             const result = await command.execute(context, member, args, replier);
             await command.onExecuteSucceeded(context, result, replier);
         } catch (e) {

@@ -23,11 +23,11 @@ export default class LeaveCommand extends VoiceCommand {
     }
 
     botMustAlreadyBeInVoiceChannel(): boolean {
-        return false;
+        return true;
     }
 
     botMustBeInTheSameVoiceChannel(): boolean {
-        return false;
+        return true;
     }
 
     userMustBeInVoiceChannel(): boolean {

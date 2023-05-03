@@ -35,8 +35,8 @@ yargs(hideBin(process.argv))
                     type: 'string',
                 },
             });
-    }, async (argv) => {
-        await DeployCommands(parseArgv(argv));
+    }, (argv) => {
+        DeployCommands(parseArgv(argv));
     })
     .option('verbose', {
         alias: 'v',

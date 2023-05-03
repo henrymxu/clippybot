@@ -15,6 +15,7 @@ export interface GuildConnectionHandler {
     registerVoiceStreamForUser(user?: User);
     unregisterVoiceStreamForUser(user?: User);
 
+    getAllVoiceStreamUserIds(): Set<string>;
     getVoiceStreamForUser(user: User): CachingStream | undefined;
     getMergedVoiceStream(): CachingStream | undefined;
 }
