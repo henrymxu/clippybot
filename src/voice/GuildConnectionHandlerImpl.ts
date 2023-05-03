@@ -68,6 +68,10 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         }
     }
 
+    getAllVoiceStreamUserIds(): Set<string> {
+        return new Set(this.voiceStreams.keys());
+    }
+
     getVoiceStreamForUser(user: User): CachingStream | undefined {
         return this.voiceStreams.get(user.id);
     }
@@ -78,12 +82,17 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
 
     disconnect(): Promise<boolean> {
         const result = this.getVoiceConnection()?.disconnect();
+        this.getVoiceConnection()?.destroy(true);
         return Promise.resolve(result ?? false);
     }
 
     join(voiceChannel?: VoiceBasedChannel): Promise<VoiceConnection> {
         if (!voiceChannel || !voiceChannel.joinable) {
             return Promise.reject('Unable to join voice channel');
+        }
+
+        if (voiceChannel.id == this.context.guild.afkChannelId) {
+            return Promise.reject('Not going to join the afk voice channel');
         }
 
         this.getVoiceConnection()?.destroy(true);

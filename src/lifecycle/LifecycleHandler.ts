@@ -8,10 +8,10 @@ export async function handleVoiceLifecycleEvent(botContext: BotContext, oldState
     if (LifecycleUtils.updateIsAboutSelf(botContext, newState)) {
         const guildContext = await botContext.retrieveGuildContext(newState.guild.id);
         if (LifecycleUtils.userChangedChannel(oldState, newState) && oldState.channelId !== null) {
-            BotContext.get().logger.d(TAG, "Bot is moving channels");
+            BotContext.get().logger.d(TAG, `Moving channels from ${oldState.channelId} to ${newState.channelId}`);
             await guildContext.connectionHandler.join(newState.channel);
         } else if (LifecycleUtils.userLeftChannel(oldState, newState)) {
-            BotContext.get().logger.d(TAG, "Bot is leaving channel");
+            BotContext.get().logger.d(TAG, "Leaving channel");
             await guildContext.connectionHandler.disconnect();
         }
     } else {
@@ -23,9 +23,14 @@ export async function handleVoiceLifecycleEvent(botContext: BotContext, oldState
                 botContext.logger.d(TAG, `${newState.member?.user.id} joined channel ${botChannelId}`);
                 guildContext.connectionHandler.registerVoiceStreamForUser(newState.member?.user);
             } else {
-                if (guildContext.connectionHandler.hasNoActiveVoiceStreams()) {
+                if (guildContext.connectionHandler.channelId == null) {
                     botContext.logger.d(TAG,
-                        `Leaving empty channel ${botChannelId} for new channel ${newState.channelId}`
+                        `Joining ${newState.channelId} after not being in a channel`
+                    );
+                    await guildContext.connectionHandler.join(newState.channel);
+                } else if (guildContext.connectionHandler.hasNoActiveVoiceStreams()) {
+                    botContext.logger.d(TAG,
+                        `Leaving current empty channel ${botChannelId} for new channel ${newState.channelId}`
                     );
                     await guildContext.connectionHandler.join(newState.channel);
                 }
