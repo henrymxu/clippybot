@@ -63,6 +63,7 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         if (this.hasNoActiveVoiceStreams()) {
             this.context.logger.d(TAG, 'Starting no registered user timeout');
             this.emptyVoiceChannelTimeout = setTimeout(async () => {
+                this.context.logger.d(TAG, 'Completed no registered user timeout');
                 await this.disconnect();
             }, NO_USER_TIMEOUT);
         }
@@ -116,14 +117,17 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         };
 
         connection.on('stateChange', (oldState, newState) => {
-            // if (oldState.status === VoiceConnectionStatus.Ready &&
-            //     newState.status === VoiceConnectionStatus.Connecting) {
-            //     BotContext.get().logger.d(TAG, `Configuring Networking`);
-            // }
-            // const oldNetworking = Reflect.get(oldState, 'networking');
-            // const newNetworking = Reflect.get(newState, 'networking');
-            // oldNetworking?.off('stateChange', networkStateChangeHandler);
-            // newNetworking?.on('stateChange', networkStateChangeHandler);
+            var configureNetworking = false;
+            if (oldState.status === VoiceConnectionStatus.Ready &&
+                newState.status === VoiceConnectionStatus.Connecting) {
+                BotContext.get().logger.d(TAG, `Configuring Networking`);
+                configureNetworking = true;
+            }
+            const oldNetworking = Reflect.get(oldState, 'networking');
+            const newNetworking = Reflect.get(newState, 'networking');
+            oldNetworking?.off('stateChange', networkStateChangeHandler);
+            newNetworking?.on('stateChange', networkStateChangeHandler);
+
             switch (newState.status) {
                 case VoiceConnectionStatus.Disconnected:
                 case VoiceConnectionStatus.Destroyed: {
@@ -131,7 +135,9 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
                         TAG, `VoiceConnection State Changed: ${newState.status} | ${this.channelId}`
                     );
                     this.reset();
-                    break;
+                    if (!configureNetworking) {
+                        this.channelId = null;
+                    }
                 }
             }
         });
@@ -154,7 +160,6 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
             stream.destroy();
         })
         this.opusDecoderStreamReferences.clear();
-        this.channelId = null;
     }
 
     hasNoActiveVoiceStreams(): boolean {
