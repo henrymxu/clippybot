@@ -4,6 +4,10 @@ import {CachingStream, CreateStreamFromBuffer} from './CachingStream';
 const MAX_BUFFER_SIZE = 500; // Buffer in seconds is approximately MAX_BUFFER_SIZE / 50
 const DEBOUNCE_TIME = 30; // Debounce time for inserting silence (Don't want to accidentally insert silence)
 
+const STREAM_SAMPLES_PER_SECOND = 48000;
+const BYTES_PER_SAMPLE = 2; // 16 bit width
+const SAMPLE_CHANNELS = 2;
+
 export default class RecordingStream extends Writable implements CachingStream {
     private rollingBuffer: Buffer[] = [];
     private rollingBufferWithSilence: Buffer[] = [];
@@ -28,10 +32,7 @@ export default class RecordingStream extends Writable implements CachingStream {
 
     getCachedBuffer(lengthInSeconds: number = MAX_BUFFER_SIZE / 50, withSilence = false): Buffer {
         const buffer = !withSilence ? this.rollingBuffer : this.rollingBufferWithSilence;
-        const samplesPerSecond = 48000;
-        const bytesPerSample = 2;
-        const channels = 2;
-        const numberOfBytes = lengthInSeconds * samplesPerSecond * bytesPerSample * channels;
+        const numberOfBytes = lengthInSeconds * STREAM_SAMPLES_PER_SECOND * BYTES_PER_SAMPLE * SAMPLE_CHANNELS;
         if (buffer.length === 0) {
             return Buffer.alloc(0);
         }
@@ -51,14 +52,14 @@ export default class RecordingStream extends Writable implements CachingStream {
         this.insertChunk(this.rollingBufferWithSilence, chunk, true);
     }
 
+    // Chunk size ~3840 bits?
     private insertChunk(buffer: Buffer[], chunk: any, isSilenceChunk = false) {
         if (!this.isWriting && !(isSilenceChunk && this.silenceDebouncer)) {
             if (buffer.length > MAX_BUFFER_SIZE) {
-                // Chunk size ~3840
                 buffer.shift();
             }
             buffer.push(chunk);
-            if (!isSilenceChunk) {
+            if (!isSilenceChunk && this.createSilenceStream) {
                 this.resetSilenceDebounce();
             }
         }
