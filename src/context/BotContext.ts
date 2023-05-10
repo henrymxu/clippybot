@@ -21,7 +21,7 @@ export class BotContext {
     readonly dispatcher: CommandDispatcher;
     readonly registry: CommandRegistry = new CommandRegistryImpl(path.join(__dirname, '../commands'));
     readonly dataSource: DataSource;
-    readonly logger = new BotLogger();
+    readonly logger: BotLogger;
 
     static initialize(client: Client, config: BotConfig) {
         this.instance = new BotContext(client, config);
@@ -40,6 +40,8 @@ export class BotContext {
     }
 
     constructor(client: Client, config: BotConfig) {
+        this.logger = new BotLogger();
+
         this.client = client;
         this.config = config;
         this.guilds = new Map<string, GuildContext>();

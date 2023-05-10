@@ -9,6 +9,14 @@ export class GuildConfigImpl implements GuildConfig {
         this.config = config;
     }
 
+    getAutoJoinServer(): boolean {
+        return true;
+    }
+
+    getAudioClipTtl(): number | undefined {
+        return undefined;
+    }
+
     getDefaultTextChannel(): string | undefined {
         return this.config.defaultTextChannel;
     }

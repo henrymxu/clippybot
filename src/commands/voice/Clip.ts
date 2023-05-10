@@ -6,7 +6,9 @@ import {
 } from '../Command';
 import {GuildContext} from '../../context/GuildContext';
 import {
-    AttachmentBuilder,
+    ActionRow, ActionRowBuilder,
+    AttachmentBuilder, ButtonBuilder,
+    ButtonStyle,
     EmbedBuilder,
     GuildMember,
     User
@@ -16,7 +18,7 @@ import {AudioUtils} from '../../utils/AudioUtils';
 import {CommandConfigBuilder} from '../arguments/CommandConfig';
 import {StringArgumentBuilder} from '../arguments/StringArgument';
 import {UserArgumentBuilder} from '../arguments/UserArgument';
-import {CommandReplier} from '../CommandReplier';
+import {CommandMessage, CommandReplier} from '../CommandReplier';
 
 export default class ClipCommand extends VoiceCommand {
     readonly config = new CommandConfigBuilder('clip')
@@ -65,20 +67,35 @@ export default class ClipCommand extends VoiceCommand {
         const caption = (args.get('caption') as string) || `Clip of ${author}`;
         await replier.deferReply();
 
-        return AudioUtils.convertBufferToMp3Buffer(
-            stream.getCachedBuffer(),
-            caption,
-            author
-        ).then(buffer => {
-            const file = new AttachmentBuilder(buffer, {name: `${caption}.mp3`});
-            const embed = new EmbedBuilder();
-            embed.setTitle(caption);
-            replier.editReply({files: [file]});
-        }).catch(err => {
+        try {
+            const buffer = await AudioUtils.convertBufferToMp3Buffer(stream.getCachedBuffer(), caption, author);
+            const response = this.createMessage(buffer, caption);
+
+            return replier.editReply(response);
+        } catch (err) {
             throw new CommandExecutionError(
                 `There was an error converting Wav Buffer to MP3 Buffer, reason: ${err.toString()}`
             );
-        });
+        }
+    }
+
+    private createMessage(buffer: Buffer, caption: string, includeDeleteButton: boolean = true): CommandMessage {
+        const file = new AttachmentBuilder(buffer, {name: `${caption}.mp3`});
+        const embed = new EmbedBuilder();
+        embed.setTitle(caption);
+
+        const requestDeleteButton = new ButtonBuilder()
+            .setCustomId("request_delete")
+            .setLabel("Delete")
+            .setStyle(ButtonStyle.Danger)
+
+        const row = new ActionRowBuilder()
+            .addComponents(requestDeleteButton);
+
+        const components = includeDeleteButton ? [row] : [];
+        // TODO: support delete button request
+        // @ts-ignore
+        return { files: [file] }
     }
 
     botMustAlreadyBeInVoiceChannel(): boolean {

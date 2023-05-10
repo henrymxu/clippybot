@@ -41,7 +41,7 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
     }
 
     registerVoiceStreamForUser(user?: User) {
-        if (!user) {
+        if (!user || user.bot) {
             return;
         }
         this.context.logger.i(TAG, `Registering voice stream for ${user}`);
@@ -126,10 +126,9 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         };
 
         connection.on('stateChange', (oldState, newState) => {
-            var configureNetworking = false;
-            if (oldState.status === VoiceConnectionStatus.Ready &&
-                newState.status === VoiceConnectionStatus.Connecting) {
-                BotContext.get().logger.d(TAG, `Configuring Networking`);
+            let configureNetworking = false;
+            if (oldState.status === VoiceConnectionStatus.Ready && newState.status === VoiceConnectionStatus.Connecting) {
+                this.context.logger.d(TAG, `Configuring Networking`);
                 configureNetworking = true;
             }
             const oldNetworking = Reflect.get(oldState, 'networking');
@@ -201,17 +200,22 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
     }
 
     private removeVoiceStreamForUser(user: User, forceLeave = false) {
-        const timeout = setTimeout(
-            () => {
-                this.context.logger.d(TAG, `Removing voice stream for ${user}`);
-                this.voiceStreams.delete(user.id);
-                this.opusDecoderStreamReferences.get(user.id)?.destroy();
-                this.opusDecoderStreamReferences.delete(user.id);
-                this.userRemovedTimeouts.delete(user.id);
-            },
-            forceLeave ? 0 : USER_REJOIN_THRESHOLD
-        );
-        this.userRemovedTimeouts.set(user.id, timeout);
-        this.voiceStreams.get(user.id)?.end();
+        const userLeftHandler = () => {
+            this.context.logger.d(TAG, `Removing voice stream for ${user}`);
+            this.voiceStreams.get(user.id)?.end();
+            this.voiceStreams.delete(user.id);
+            this.opusDecoderStreamReferences.get(user.id)?.destroy();
+            this.opusDecoderStreamReferences.delete(user.id);
+            this.userRemovedTimeouts.delete(user.id);
+        }
+        if (!forceLeave) {
+            const timeout = setTimeout(
+                userLeftHandler,
+                USER_REJOIN_THRESHOLD
+            );
+            this.userRemovedTimeouts.set(user.id, timeout);
+        } else {
+            userLeftHandler();
+        }
     }
 }

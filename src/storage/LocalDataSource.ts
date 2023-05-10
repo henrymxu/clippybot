@@ -5,19 +5,8 @@ import Keyv from 'keyv';
 
 export class LocalDataSource implements DataSource {
     private readonly config = {
-        defaultTextChannel: '723339204838555649',
-        defaultLanguage: 'en-US',
+        defaultTextChannel: '',
         userSettings: {
-            "114947386333331458": {
-                languages: {
-                    'learning': {
-                        code: "ja-JP",
-                        voice: undefined
-                    }
-                },
-                "thread": '',
-                "conversationMode": 0,
-            }
         }
     };
 
