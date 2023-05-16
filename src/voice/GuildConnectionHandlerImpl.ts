@@ -2,7 +2,7 @@ import {GuildContext} from '../context/GuildContext';
 import {GuildConnectionHandler} from './GuildConnectionHandler';
 import {User, VoiceBasedChannel} from 'discord.js';
 import {
-    AudioReceiveStream,
+    AudioReceiveStream, EndBehaviorType,
     getVoiceConnection,
     joinVoiceChannel,
     VoiceConnection,
@@ -45,7 +45,9 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
             return;
         }
         this.context.logger.i(TAG, `Registering voice stream for ${user}`);
-        const stream = this.getVoiceConnection()?.receiver?.subscribe(user.id);
+        const stream = this.getVoiceConnection()?.receiver?.subscribe(
+            user.id, {end: {behavior: EndBehaviorType.Manual}}
+        );
         if (!stream) {
             return;
         }
@@ -96,6 +98,7 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
             return Promise.reject('Not going to join the afk voice channel');
         }
 
+        if (this.emptyVoiceChannelTimeout) clearTimeout(this.emptyVoiceChannelTimeout);
         this.getVoiceConnection()?.destroy(true);
         this.channelId = voiceChannel.id;
 
@@ -160,6 +163,9 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
     reset() {
         this.activeVoiceStreamCount = 0;
         this.voiceStreams.clear();
+        if (this.emptyVoiceChannelTimeout) {
+            clearTimeout(this.emptyVoiceChannelTimeout);
+        }
         this.userRemovedTimeouts.forEach((timeout: NodeJS.Timeout) => {
             clearTimeout(timeout);
         });

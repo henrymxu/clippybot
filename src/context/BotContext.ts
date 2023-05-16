@@ -79,7 +79,11 @@ export class BotContext {
 
     registerVoiceLifecycleObserver() {
         this.client.on('voiceStateUpdate', async (oldState, newState) => {
-            await handleVoiceLifecycleEvent(this, oldState, newState);
+            try {
+                await handleVoiceLifecycleEvent(this, oldState, newState);
+            } catch (e) {
+                this.logger.e("VoiceStateUpdate", e);
+            }
         });
     }
 }

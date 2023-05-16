@@ -49,11 +49,14 @@ export class CommandRegistryImpl implements CommandRegistry {
         });
     }
 
-    getSlashCommands(): SlashCommandBuilder[] {
+    getSlashCommands(guildOnly: boolean = false): SlashCommandBuilder[] {
         const slashCommands: SlashCommandBuilder[] = [];
         const groupSlashCommandBuilders = new Map<string, SlashCommandBuilder>();
 
         this.commands.forEach(command => {
+            if (guildOnly && !command.config.guildOnly) {
+                return;
+            }
             if (command.config.parent) {
                 const builder = groupSlashCommandBuilders.get(command.config.parent) || new SlashCommandBuilder();
                 builder.setName(command.config.parent).setDescription('TBD');

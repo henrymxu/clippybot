@@ -10,6 +10,7 @@ export class CommandConfig {
     readonly descriptions: string[];
     readonly arguments: CommandArgumentConfig<CommandArgumentType>[];
     readonly buttonIds: string[];
+    readonly guildOnly: boolean;
 
     constructor(
         name: string,
@@ -19,6 +20,7 @@ export class CommandConfig {
         args: CommandArgumentConfig<CommandArgumentType>[],
         buttonIds: string[],
         shouldUseSubCommands: boolean,
+        guildOnly: boolean
     ) {
         this.useSubcommands = shouldUseSubCommands;
         this.name = name;
@@ -27,6 +29,7 @@ export class CommandConfig {
         this.descriptions = descriptions;
         this.arguments = args;
         this.buttonIds = buttonIds;
+        this.guildOnly = guildOnly;
     }
 
     registerCommandsToGroup(builder: SlashCommandBuilder) {
@@ -90,6 +93,8 @@ export class CommandConfigBuilder {
     private apartOfSubcommandGroup = false;
     private shouldUseSubcommands = false;
 
+    private guildOnly = false;
+
     constructor(name: string, ...keywords: string[]) {
         this.name = name;
         if (keywords.length === 0) {
@@ -124,12 +129,17 @@ export class CommandConfigBuilder {
         return this;
     }
 
-    setExamples(...examples: string[]) {
+    setExamples(...examples: string[]): CommandConfigBuilder {
         return this;
     }
 
-    setButtonIds(...ids: string[]) {
+    setButtonIds(...ids: string[]): CommandConfigBuilder {
         this.buttonIds = ids;
+        return this;
+    }
+
+    setGuildOnly(): CommandConfigBuilder {
+        this.guildOnly = true;
         return this;
     }
 
@@ -141,7 +151,8 @@ export class CommandConfigBuilder {
             this.descriptions,
             this.arguments,
             this.buttonIds,
-            this.shouldUseSubcommands
+            this.shouldUseSubcommands,
+            this.guildOnly
         );
     }
 }

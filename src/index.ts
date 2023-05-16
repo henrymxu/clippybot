@@ -3,7 +3,7 @@
 import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
 import {StartClippyBot} from './clippybot';
-import {DeployCommands} from './deploycommands';
+import {Deploycommands} from './deploycommands';
 import {BotConfig} from './config/BotConfig';
 
 function parseArgv(argv: any): BotConfig {
@@ -36,7 +36,7 @@ yargs(hideBin(process.argv))
                 },
             });
     }, (argv) => {
-        DeployCommands(parseArgv(argv));
+        Deploycommands(parseArgv(argv));
     })
     .option('verbose', {
         alias: 'v',
