@@ -13,8 +13,8 @@ export async function handleVoiceLifecycleEvent(botContext: BotContext, oldState
             guildContext.logger.d(TAG, `Moving channels from ${oldState.channelId} to ${newState.channelId}`);
             await guildContext.connectionHandler.join(newState.channel);
         } else if (LifecycleUtils.userLeftChannel(oldState, newState)) {
-            guildContext.logger.d(TAG, "Leaving channel");
-            await guildContext.connectionHandler.disconnect();
+            // No need to handle anything here, connection handler will do it
+            guildContext.logger.d(TAG, `Leaving channel ${oldState.channelId}`);
         }
     } else {
         const botChannelId = guildContext.connectionHandler.channelId;

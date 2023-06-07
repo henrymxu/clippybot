@@ -18,17 +18,14 @@ import {BotContext} from '../context/BotContext';
 const TAG = "GuildConnectionHandlerImpl";
 
 const NO_USER_TIMEOUT = 60 * 1000; // 1 Minute?
-const USER_REJOIN_THRESHOLD = 15000;
 
 export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
     private context: GuildContext;
-    private activeVoiceStreamCount = 0;
     private readonly voiceStreams: Map<string, RecordingStream> = new Map();
     private readonly opusDecoderStreamReferences: Map<string, Transform> = new Map();
     private readonly mergeStream: MergingStream = new MergingStream(this.voiceStreams);
 
     private emptyVoiceChannelTimeout: NodeJS.Timeout | undefined;
-    private readonly userRemovedTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
     channelId: string | null = null;
 
@@ -51,7 +48,6 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         if (!stream) {
             return;
         }
-        this.activeVoiceStreamCount++;
         this.startVoiceStreamForUser(user, stream);
         if (this.emptyVoiceChannelTimeout) clearTimeout(this.emptyVoiceChannelTimeout);
     }
@@ -61,7 +57,6 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
             return;
         }
         this.removeVoiceStreamForUser(user);
-        this.activeVoiceStreamCount--;
         if (this.hasNoActiveVoiceStreams()) {
             this.context.logger.d(TAG, 'Starting no registered user timeout');
             this.emptyVoiceChannelTimeout = setTimeout(async () => {
@@ -71,8 +66,16 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         }
     }
 
-    getAllVoiceStreamUserIds(): Set<string> {
-        return new Set(this.voiceStreams.keys());
+    getAllVoiceStreamUserIds(): Map<string, boolean> {
+        let subscriptionKeys = new Set(this.getVoiceConnection()?.receiver?.subscriptions.keys() ?? []);
+        let streamKeys = new Set(this.voiceStreams.keys());
+
+        let map = new Map<string, boolean>();
+
+        streamKeys.forEach((key) => {
+            map.set(key, subscriptionKeys.has(key));
+        })
+        return map;
     }
 
     getVoiceStreamForUser(user: User): CachingStream | undefined {
@@ -115,30 +118,17 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
         this.context.joinedVoiceChannel(connection);
 
         connection.on(VoiceConnectionStatus.Ready, (oldState, newState) => {
-            this.context.logger.i(TAG, `Connected to ${voiceChannel.id}`);
+            let userCount = 0;
             voiceChannel?.members?.forEach((value, key) => {
                 if (key != BotContext.get().getSelfId()) {
                     this.registerVoiceStreamForUser(value.user);
+                    userCount++;
                 }
             });
+            this.context.logger.i(TAG, `Connected to ${voiceChannel.id}, registering ${userCount} voice streams`);
         });
 
-        const networkStateChangeHandler = (oldNetworkState, newNetworkState) => {
-            const newUdp = Reflect.get(newNetworkState, 'udp');
-            clearInterval(newUdp?.keepAliveInterval);
-        };
-
         connection.on('stateChange', (oldState, newState) => {
-            let configureNetworking = false;
-            if (oldState.status === VoiceConnectionStatus.Ready && newState.status === VoiceConnectionStatus.Connecting) {
-                this.context.logger.d(TAG, `Configuring Networking`);
-                configureNetworking = true;
-            }
-            const oldNetworking = Reflect.get(oldState, 'networking');
-            const newNetworking = Reflect.get(newState, 'networking');
-            oldNetworking?.off('stateChange', networkStateChangeHandler);
-            newNetworking?.on('stateChange', networkStateChangeHandler);
-
             switch (newState.status) {
                 case VoiceConnectionStatus.Disconnected:
                 case VoiceConnectionStatus.Destroyed: {
@@ -146,9 +136,7 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
                         TAG, `VoiceConnection State Changed: ${newState.status} | ${this.channelId}`
                     );
                     this.reset();
-                    if (!configureNetworking) {
-                        this.channelId = null;
-                    }
+                    this.channelId = null;
                 }
             }
         });
@@ -161,23 +149,19 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
     }
 
     reset() {
-        this.activeVoiceStreamCount = 0;
         this.voiceStreams.clear();
         if (this.emptyVoiceChannelTimeout) {
             clearTimeout(this.emptyVoiceChannelTimeout);
         }
-        this.userRemovedTimeouts.forEach((timeout: NodeJS.Timeout) => {
-            clearTimeout(timeout);
-        });
-        this.userRemovedTimeouts.clear();
+
         this.opusDecoderStreamReferences.forEach(stream => {
-            stream.destroy();
+            stream?.destroy();
         })
         this.opusDecoderStreamReferences.clear();
     }
 
     hasNoActiveVoiceStreams(): boolean {
-        return this.activeVoiceStreamCount === 0;
+        return this.voiceStreams.size == 0;
     }
 
     private startVoiceStreamForUser(user: User, sourceStream: AudioReceiveStream) {
@@ -188,40 +172,30 @@ export class GuildConnectionHandlerImpl implements GuildConnectionHandler {
             sourceStream.removeAllListeners();
             sourceStream.destroy();
             decodedAudioStream.destroy();
-            return;
         });
-
-        const maxBufferSize = this.context.config.getMaxBufferSize();
-
-        // To support merge streams, we need to have a silent stream
-        const supportMergeStream = this.context.config.doesSupportMergeStream();
 
         this.opusDecoderStreamReferences.set(user.id, decodedAudioStream);
 
-        const previousStream = this.voiceStreams.get(user.id);
-        const recorderStream = previousStream || new RecordingStream(maxBufferSize, supportMergeStream);
+        const maxBufferSize = this.context.config.getMaxBufferSize();
+        // To support merge streams, we need to have a silent stream
+        const supportMergeStream = this.context.config.doesSupportMergeStream();
+
+        // previousStream || new RecordingStream(maxBufferSize, supportMergeStream);
+        const recorderStream = new RecordingStream(maxBufferSize, supportMergeStream)
 
         decodedAudioStream.pipe(recorderStream, {end: false});
         this.voiceStreams.set(user.id, recorderStream);
     }
 
-    private removeVoiceStreamForUser(user: User, forceLeave = false) {
+    private removeVoiceStreamForUser(user: User) {
         const userLeftHandler = () => {
             this.context.logger.d(TAG, `Removing voice stream for ${user}`);
-            this.voiceStreams.get(user.id)?.end();
+            this.voiceStreams.get(user.id)?.destroy();
             this.voiceStreams.delete(user.id);
+
             this.opusDecoderStreamReferences.get(user.id)?.destroy();
             this.opusDecoderStreamReferences.delete(user.id);
-            this.userRemovedTimeouts.delete(user.id);
         }
-        if (!forceLeave) {
-            const timeout = setTimeout(
-                userLeftHandler,
-                USER_REJOIN_THRESHOLD
-            );
-            this.userRemovedTimeouts.set(user.id, timeout);
-        } else {
-            userLeftHandler();
-        }
+        userLeftHandler();
     }
 }
