@@ -4,7 +4,12 @@ import {BotConfig} from './config/BotConfig';
 
 export function StartClippyBot(config: BotConfig) {
     // Create a new client instance
-    const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] });
+    const client = new Client({ intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.GuildModeration,
+            GatewayIntentBits.GuildMessages,
+        ] });
 
     // When the client is ready, run this code (only once)
     // We use 'c' for the event parameter to keep it separate from the already defined 'client'
@@ -16,5 +21,7 @@ export function StartClippyBot(config: BotConfig) {
     BotContext.initializeAndLogin(client, config).then(() => {
         BotContext.get().registerVoiceLifecycleObserver();
         BotContext.get().registerSlashCommandObserver();
+        BotContext.get().registerAuditLogObserver();
+        BotContext.get().registerSoundboardObserver();
     });
 }

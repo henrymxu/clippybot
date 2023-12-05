@@ -4,20 +4,23 @@ import {GuildConnectionHandler} from '../voice/GuildConnectionHandler';
 import {GuildConnectionHandlerImpl} from '../voice/GuildConnectionHandlerImpl';
 import {GuildLogger} from '../logging/GuildLogger';
 import {GuildConfig} from '../config/GuildConfig';
+import {GuildMetrics} from '../metrics/GuildMetrics';
 
 export class GuildContext {
     readonly guild: Guild;
 
     readonly config: GuildConfig;
     readonly logger: GuildLogger;
+    readonly metrics: GuildMetrics;
 
     readonly connectionHandler: GuildConnectionHandler;
 
-    constructor(guild: Guild, config: GuildConfig) {
+    constructor(guild: Guild, config: GuildConfig, metrics: GuildMetrics) {
         this.guild = guild;
         this.logger = new GuildLogger(this);
         this.connectionHandler = new GuildConnectionHandlerImpl(this);
         this.config = config;
+        this.metrics = metrics;
     }
 
     async initialize() {

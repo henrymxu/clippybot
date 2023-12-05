@@ -7,7 +7,6 @@ import {DeployCommands} from './deploycommands';
 import {BotConfig} from './config/BotConfig';
 
 function parseArgv(argv: any): BotConfig {
-    console.log(JSON.stringify(argv));
     return new BotConfig(argv);
 }
 
@@ -17,6 +16,10 @@ yargs(hideBin(process.argv))
             .options({
                 'discord_token': {
                     description: 'Discord API token',
+                    type: 'string',
+                },
+                'mongo_uri': {
+                    description: 'Mongo connection URI',
                     type: 'string',
                 },
             });

@@ -19,13 +19,15 @@ Clippy is a Discord Bot dedicated to making audio clips of users, perfect for so
 
 1. `npm run deploy -- --discord_token <discord_token> --application_id <application_id>`
 
-2. `npm run start -- --discord_token <discord_token>`
+2. `npm run start -- --discord_token <discord_token> --mongo_uri <mongo_connection_uri>`
 
-### Required API Tokens
+### API Tokens
 
-| Name                                                                       | Environment Variable | Description                                                  | Required |
-|----------------------------------------------------------------------------|----------------------|--------------------------------------------------------------|----------|
-| [Discord Bot Token](https://discord.com/developers/applications)           | discord_token        | Required for the bot to login and communicate with discord.  | ✓        |
+| Name                                                                                     | Environment Variable | Description                                                 | Required |
+|------------------------------------------------------------------------------------------|----------------------|-------------------------------------------------------------|----------|
+| [Discord Bot Token](https://discord.com/developers/applications)                         | discord_token        | Required for the bot to login and communicate with discord. | ✓        |
+| [Mongo Connection URI](https://www.mongodb.com/docs/manual/reference/connection-string/) | mongo_uri            | Required for storing configs and metrics                    | ✓        |
+
 
 ## Troubleshooting
 
