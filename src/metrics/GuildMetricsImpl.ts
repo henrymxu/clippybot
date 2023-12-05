@@ -1,4 +1,4 @@
-import {GuildMetrics} from './GuildMetrics';
+import {GuildMetrics, SoundboardUsage} from './GuildMetrics';
 import {Db} from 'mongodb';
 
 export class GuildMetricsImpl implements GuildMetrics {
@@ -25,7 +25,7 @@ export class GuildMetricsImpl implements GuildMetrics {
         this.uploadMetric('soundboard_usage', eventData)
     }
 
-    async fetchSoundboardUsage(): Promise<{}> {
+    async fetchSoundboardUsage(count: number): Promise<SoundboardUsage> {
         if (!this.db) {
             return Promise.reject();
         }
@@ -36,20 +36,40 @@ export class GuildMetricsImpl implements GuildMetrics {
                     audienceSize: { $gte: 2 } // Filters events with audience size >= 2
                 }
             },
+            { $unwind: "$userId" },
             {
                 $group: {
-                    _id: "$soundboardId",
-                    usage: { $sum: 1 }
+                    _id: { soundboardId: "$soundboardId", userId: "$userId" },
+                    count: { $sum: 1 }
                 }
             },
             {
-                $sort: {
-                    usage: -1 // Sorts by usage in descending order
+                $group: {
+                    _id: "$_id.soundboardId",
+                    users: { $push: { userId: "$_id.userId", count: "$count" } },
+                    totalCount: { $sum: "$count" } // Calculate totalUsage
+                }
+            },
+            { $sort: { totalCount: -1 } },
+            { $limit: count },
+            {
+                $project: {
+                    _id: 1,
+                    topUsers: { $slice: ["$users", 3] },
+                    totalCount: 1
                 }
             },
         ];
-
+        /*
+            { _id: int, totalCount: int, topUsers: [{userId: int, count: int}]
+         */
         const result = await this.db.collection('soundboard_usage').aggregate(pipeline).toArray();
-        return {soundboard_usage: result.map(doc => { return {id: doc._id, usage: doc.usage} })};
+        return {stats: result.map(doc => {
+            const users = doc.topUsers.map(user => { return { id: user.userId, count: user.count }})
+                .sort((a, b) => b.count - a.count);
+            return {
+                id: doc._id, usage: doc.totalCount, topUsers: users
+            }
+        })};
     }
 }

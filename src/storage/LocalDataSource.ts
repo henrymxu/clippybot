@@ -46,11 +46,11 @@ export class LocalDataSource implements DataSource {
         return new GuildConfigImpl(id, config, this.saveGuildConfig);
     }
 
-    saveGuildConfig(id: string, config: GuildConfig): Promise<any> {
+    saveGuildConfig(id: string, config: any): Promise<any> {
         const newData = {
             guild_id: id,
             type: 'guild_config',
-            config: config.getConfig()
+            config: config
         };
         let result: Promise<any> = Promise.resolve();
         if (this.mongoClient) {

@@ -1,5 +1,5 @@
 import {GuildContext} from '../context/GuildContext';
-import {VoiceBasedChannel, VoiceChannel} from 'discord.js';
+import {VoiceBasedChannel} from 'discord.js';
 import {BotContext} from '../context/BotContext';
 
 /**
