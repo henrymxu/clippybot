@@ -10,6 +10,8 @@ import {handleVoiceLifecycleEvent} from '../lifecycle/LifecycleHandler';
 import {LocalDataSource} from '../storage/LocalDataSource';
 import {DataSource} from '../storage/DataSource';
 import {BotConfig} from '../config/BotConfig';
+import {handleAuditLogEvent} from '../admin/AuditLogHandler';
+import {handleSoundboardEvent} from '../soundboard/SoundboardEventHandler';
 
 export class BotContext {
     private static instance: BotContext | undefined;
@@ -46,7 +48,7 @@ export class BotContext {
         this.config = config;
         this.guilds = new Map<string, GuildContext>();
         this.dispatcher = new CommandDispatcherImpl();
-        this.dataSource = new LocalDataSource(config.get('database_path'));
+        this.dataSource = new LocalDataSource(config.get('mongo_uri'));
     }
 
     async retrieveGuildContext(guildId: string): Promise<GuildContext> {
@@ -55,7 +57,8 @@ export class BotContext {
             const guild = await this.client.guilds.fetch(guildId);
 
             const config = await this.dataSource.getGuildConfig(guildId);
-            context = new GuildContext(guild, config);
+            const metrics = await this.dataSource.getGuildMetrics(guildId);
+            context = new GuildContext(guild, config, metrics);
             this.guilds.set(guildId, context);
             await context.initialize();
         }
@@ -81,5 +84,28 @@ export class BotContext {
         this.client.on('voiceStateUpdate', async (oldState, newState) => {
             await handleVoiceLifecycleEvent(this, oldState, newState);
         });
+    }
+
+    registerAuditLogObserver() {
+        this.client.on(Events.GuildAuditLogEntryCreate, async (auditLog, guild) => {
+            await handleAuditLogEvent(this, guild, auditLog)
+        })
+    }
+
+    registerSoundboardObserver() {
+        this.client.on(Events.Raw, async (data) => {
+            if (data.t == 'VOICE_CHANNEL_EFFECT_SEND') {
+                const guildContext = await this.retrieveGuildContext(data.d.guild_id);
+                await handleSoundboardEvent(guildContext, data.d);
+            } else if (data.t == 'GUILD_CREATE') {
+                const guildId = data.d.id;
+                const soundboard_sounds = data.d.soundboard_sounds;
+                const guildContext = await this.retrieveGuildContext(guildId);
+                guildContext.config.setSoundboardSounds(soundboard_sounds);
+            } else if (data.t == 'GUILD_SOUNDBOARD_SOUND_CREATE') {
+                const guildContext = await this.retrieveGuildContext(data.d.guild_id);
+                guildContext.config.addSoundboardSound(data.d)
+            }
+        })
     }
 }
