@@ -1,7 +1,6 @@
 import {UserConfig} from './UserConfig';
 
 export interface GuildConfig {
-    getConfig(): any
     getAutoJoinServer(): boolean
 
     setDefaultTextChannel(channelId: string)

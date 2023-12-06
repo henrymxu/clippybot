@@ -25,17 +25,12 @@ async function handleSoundboardDelete(guildContext: GuildContext, auditLog: Guil
     }
     const name = auditLog.changes.find(it => it.key == 'name')?.old;
     // @ts-ignore
-    const emoji_name: string | undefined = auditLog.changes.find(it => it.key == 'emoji_name')?.old;
+    const emojiName: string | undefined = auditLog.changes.find(it => it.key == 'emoji_name')?.old;
     // @ts-ignore
-    const emoji_id: string | undefined = auditLog.changes.find(it => it.key == 'emoji_id')?.old;
+    const emojiId: string | undefined = auditLog.changes.find(it => it.key == 'emoji_id')?.old;
     // @ts-ignore
-    const maker_id: string = auditLog.changes.find(it => it.key == 'user_id')?.old;
-    let emoji: string = "unknown"
-    if (emoji_id && !emoji_name) {
-        emoji = (await guildContext.guild.emojis.fetch(emoji_id)).toString();
-    } else if (emoji_name) {
-        emoji = emoji_name;
-    }
+    const makerId: string = auditLog.changes.find(it => it.key == 'user_id')?.old;
+    const emoji = await GuildUtils.getSoundboardEmojiString(guildContext, emojiName, emojiId)
     // TODO: add metrics on usage before deletion
-    return `${GuildUtils.createUserMentionString(user.id)} deleted soundboard clip ${emoji}: ${name} made by ${GuildUtils.createUserMentionString(maker_id)}`;
+    return `${GuildUtils.createUserMentionString(user.id)} deleted soundboard clip ${emoji}: ${name} made by ${GuildUtils.createUserMentionString(makerId)}`;
 }

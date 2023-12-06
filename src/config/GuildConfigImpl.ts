@@ -13,10 +13,6 @@ export class GuildConfigImpl implements GuildConfig {
         this.save = save;
     }
 
-    getConfig(): any {
-        return this.config;
-    }
-
     getAutoJoinServer(): boolean {
         return true;
     }
@@ -31,7 +27,7 @@ export class GuildConfigImpl implements GuildConfig {
 
     setDefaultTextChannel(channelId: string) {
         this.config.defaultTextChannel = channelId;
-        this.save(this.id, this);
+        this.save(this.id, this.config);
     }
 
     getUserConfig(userId:string): UserConfig {
@@ -60,13 +56,12 @@ export class GuildConfigImpl implements GuildConfig {
         let sounds = this.config.soundboardSounds;
         sounds.push(sound);
         this.config.soundboardSounds = sounds;
-        this.save(this.id, this);
+        this.save(this.id, this.config);
     }
 
     setSoundboardSounds(sounds: any[]) {
         this.config.soundboardSounds = sounds;
-        console.log(this.config.soundboardSounds);
-        this.save(this.id, this);
+        this.save(this.id, this.config);
     }
 }
 
